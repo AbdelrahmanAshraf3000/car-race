@@ -2,7 +2,7 @@
     "start-scene": "menu",
     "window":
     {
-        "title":"Abdelrahman Ashraf Mahmoud",
+        "title":"MarioCart3D",
         "size":{
             "width":1280,
             "height":720
