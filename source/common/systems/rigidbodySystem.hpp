@@ -6,7 +6,14 @@
 #include <tinyobj/tiny_obj_loader.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
+#include <glm/trigonometric.hpp>
+#include <glm/gtx/fast_trigonometry.hpp>
+#include <memory>
+#include <iostream>
+#include <unordered_map>
+#include <stdexcept>
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>
+#include "../components/movement.hpp"
 
 namespace our
 {
@@ -227,6 +234,159 @@ namespace our
                         }
                         dynWorld->addVehicle(rigidbodyComponent->vehicle);
                     }
+                    btVector3 velocity = rigidbodyComponent->rigidbody->getLinearVelocity();
+                    if (velocity.length() > 7.0f)
+                    {
+                        velocity = velocity.normalized() * 7.0f;
+                        rigidbodyComponent->rigidbody->setLinearVelocity(velocity);
+                    }
+
+                    static float engineForce = 0.0f;
+                    static float steeringValue = 0.0f;
+                    float brakeForce = 0.0f;
+                    // Check if the vehicle is in the air by examining the wheel contact points
+                    bool isInAir = true;
+                    for (int i = 0; i < rigidbodyComponent->vehicle->getNumWheels(); i++)
+                    {
+                        if (rigidbodyComponent->vehicle->getWheelInfo(i).m_raycastInfo.m_isInContact)
+                        {
+                            isInAir = false;
+                            break;
+                        }
+                    }
+
+                    // Reduce gravity if the vehicle is in the air
+                    if (isInAir)
+                    {
+                        rigidbodyComponent->rigidbody->applyCentralForce(btVector3(0, 15, 0)); // Small upward force
+
+                        // Level the car by setting the angular velocity to zero
+                        rigidbodyComponent->rigidbody->setAngularVelocity(btVector3(0, 0, 0));
+
+                        dynWorld->setGravity(btVector3(0, -2, 0)); // Reduced gravity
+                    }
+                    else
+                    {
+                        dynWorld->setGravity(btVector3(0, -9.81, 0)); // Normal gravity
+                    }
+                    if (app->getKeyboard().isPressed(GLFW_KEY_UP))
+                    {
+                        engineForce += 10.0f;
+                    }
+                    else if (app->getKeyboard().isPressed(GLFW_KEY_DOWN))
+                    {
+                        engineForce -= 10.0f;
+                    }
+                    else
+                    {
+                        engineForce = 0.0f;
+                        brakeForce = 2.0f;
+                    }
+
+                    // Modify steering logic
+                    if (app->getKeyboard().isPressed(GLFW_KEY_LEFT))
+                    {
+                        steeringValue += 0.005f; // Reduce steering increment for smoother turns
+                    }
+                    else if (app->getKeyboard().isPressed(GLFW_KEY_RIGHT))
+                    {
+                        steeringValue -= 0.005f; // Reduce steering increment for smoother turns
+                    }
+                    else
+                    {
+                        // Add gradual return to center
+                        steeringValue *= 0.95f; // Gradually return steering to center when no input
+                    }
+
+                    // Adjust steering angle limits based on velocity
+                    float maxSteeringAngle = glm::mix(0.4f, 0.07f, glm::clamp(velocity.length() / 10.0f, 0.0f, 1.0f));
+                    steeringValue = glm::clamp(steeringValue, -maxSteeringAngle, maxSteeringAngle);
+
+                    if (app->getKeyboard().isPressed(GLFW_KEY_SPACE))
+                    {
+                        brakeForce = 10.0f;
+                    }
+
+                    for (int i = 0; i < rigidbodyComponent->vehicle->getNumWheels(); i++)
+                    {
+                        engineForce = glm::clamp(engineForce, -700.0f, 700.0f);
+                        rigidbodyComponent->vehicle->applyEngineForce(engineForce, i);
+                        rigidbodyComponent->vehicle->setBrake(brakeForce, i);
+
+                        if (i < 2)
+                        {
+                            rigidbodyComponent->vehicle->setSteeringValue(steeringValue, i);
+                        }
+                    }
+                    rigidbodyComponent->vehicle->updateVehicle(deltaTime);
+                }
+                // Get the current transform of the rigid body
+                btTransform transform;
+                if (rigidbodyComponent->vehicle)
+                {
+
+                    rigidbodyComponent->rigidbody->getMotionState()->getWorldTransform(transform);
+                    // Get position and rotation
+                    btVector3 pos = transform.getOrigin();
+                    btQuaternion rot = transform.getRotation();
+
+                    // Convert to Euler angles
+                    float yaw, pitch, roll;
+                    quaternionToEuler(rot, yaw, roll, pitch);
+
+                    // Update the entity's position and rotation
+                    rigidbodyComponent->position = glm::vec3(pos.x(), pos.y(), pos.z());
+                    rigidbodyComponent->rotation = glm::vec3(yaw, pitch, roll);
+
+                    entity->localTransform.position = rigidbodyComponent->position;
+                    entity->localTransform.position.y -= 0.07f;
+                    entity->localTransform.rotation = rigidbodyComponent->rotation;
+                    
+                    btVector3 velocity = rigidbodyComponent->rigidbody->getLinearVelocity();
+                    float steeringValue = rigidbodyComponent->vehicle->getSteeringValue(0);
+                    for (auto child : world->getEntities())
+                    {
+                        if (child->parent == entity)
+                        {
+                            std::string name = child->name;
+                            if (name.find("tire") != std::string::npos)
+                            {
+                                MovementComponent *movement = child->getComponent<MovementComponent>();
+                                if (movement)
+                                {
+                                    float groundSpeed = velocity.length();
+                                    // Get forward direction from velocity
+                                    float forwardSpeed = velocity.dot(rigidbodyComponent->rigidbody->getWorldTransform().getBasis().getColumn(2));
+                                    
+                                    if (rigidbodyComponent->vehicle->getWheelInfo(0).m_raycastInfo.m_isInContact) {
+                                        // Apply rotation based on forward/backward movement
+                                        float rotationSpeed = groundSpeed * 2 * (forwardSpeed >= 0 ? 1 : -1);
+                                        movement->angularVelocity = glm::vec3(rotationSpeed, 0.0f, 0.0f);
+                                    } else {
+                                        movement->angularVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
+                                    }
+                                }
+                                if (name == "tireFront")
+                                {
+                                    child->localTransform.rotation = glm::vec3(child->localTransform.rotation.x, steeringValue, 0.0f);
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (rigidbodyComponent->rigidbody)
+                {
+                    rigidbodyComponent->rigidbody->getMotionState()->getWorldTransform(transform);
+                    btVector3 pos = transform.getOrigin();
+                    btQuaternion rot = transform.getRotation();
+
+                    float yaw, pitch, roll;
+                    quaternionToEuler(rot, yaw, pitch, roll);
+
+                    rigidbodyComponent->position = glm::vec3(pos.x(), pos.y(), pos.z());
+                    rigidbodyComponent->rotation = glm::vec3(yaw, roll, pitch);
+                    entity->localTransform.position = rigidbodyComponent->position;
+                    entity->localTransform.rotation = rigidbodyComponent->rotation;
                 }
             }
         }
