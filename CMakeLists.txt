@@ -1,11 +1,5 @@
-cmake_minimum_required(VERSION 3.10...3.50)  # Selects the minimum version of CMake required to run this file
+cmake_minimum_required(VERSION 3.10...3.50)   # Selects the minimum version of CMake required to run this file
 project(GFX-LAB VERSION 0.1.0)          # Here we select the project name and version
-
-# Linux compatibility
-if(UNIX AND NOT APPLE)
-        find_package(OpenGL REQUIRED)
-        find_package(GLEW REQUIRED)
-endif()
 
 # Here we select C++17 with all the standards required and all compiler-specific extensions disabled
 set(CMAKE_CXX_STANDARD 17)
@@ -45,7 +39,7 @@ set(COMMON_SOURCES
         source/common/asset-loader.cpp
         source/common/asset-loader.hpp
         source/common/deserialize-utils.hpp
-
+        
         source/common/shader/shader.hpp
         source/common/shader/shader.cpp
 
@@ -81,15 +75,27 @@ set(COMMON_SOURCES
         source/common/components/mesh-renderer.cpp
         source/common/components/free-camera-controller.hpp
         source/common/components/free-camera-controller.cpp
+        source/common/components/input.hpp
+        source/common/components/input.cpp
+        source/common/components/rigidbody.cpp
+        source/common/components/rigidbody.hpp
+        source/common/components/collider.cpp
+        source/common/components/collider.hpp
         source/common/components/movement.hpp
         source/common/components/movement.cpp
         source/common/components/component-deserializer.hpp
         source/common/components/light.hpp
         source/common/components/light.cpp
 
+        #source/common/components/sound.hpp
+        #source/common/components/sound.cpp
+        
+        #source/common/systems/miniaudio.h
         source/common/systems/forward-renderer.hpp
         source/common/systems/forward-renderer.cpp
+        source/common/systems/ColliderSystem.hpp
         source/common/systems/free-camera-controller.hpp
+        source/common/systems/rigidbodySystem.hpp
         source/common/systems/movement.hpp
 )
 
@@ -101,13 +107,15 @@ include_directories(
         vendor/glm
         vendor/imgui
         vendor/utils
+        vendor/bullet
 )
 
-
+ 
+link_directories(${PROJECT_SOURCE_DIR}/libs)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${PROJECT_SOURCE_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${PROJECT_SOURCE_DIR}/bin)
-
+ 
 set(STATES_SOURCES
         source/states/play-state.hpp
         source/states/menu-state.hpp
@@ -126,9 +134,8 @@ set(STATES_SOURCES
 # Each target compiles one example source file and the common & vendor source files
 # Then we link GLFW with each target
 add_executable(GAME_APPLICATION source/main.cpp ${STATES_SOURCES} ${COMMON_SOURCES} ${VENDOR_SOURCES})
-target_link_libraries(GAME_APPLICATION glfw)
-
-if(UNIX AND NOT APPLE)
-        target_link_libraries(GAME_APPLICATION OpenGL::GL)
-        target_link_libraries(GAME_APPLICATION GLEW::GLEW)
-endif()
+target_link_libraries(GAME_APPLICATION glfw
+libBulletDynamics.a
+libBulletCollision.a
+LinearMath.a
+)
