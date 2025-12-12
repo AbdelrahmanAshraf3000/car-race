@@ -7,6 +7,7 @@
 #include "movement.hpp"
 #include "rigidbody.hpp"
 #include "collider.hpp"
+#include "light.hpp"
 
 namespace our
 {
@@ -41,6 +42,9 @@ namespace our
         else if (type == ColliderComponent::getID())
         {
             component = entity->addComponent<ColliderComponent>();
+        }
+        else if(type == LightComponent::getID()){
+            component = entity->addComponent<LightComponent>();
         }
 
         if (component)
