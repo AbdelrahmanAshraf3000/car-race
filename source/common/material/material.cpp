@@ -63,4 +63,61 @@ namespace our {
         sampler = AssetLoader<Sampler>::get(data.value("sampler", ""));
     }
 
+
+    void LitMaterial::setup() const {
+        TexturedMaterial::setup();
+
+        if(albedo_map){ 
+            glActiveTexture(GL_TEXTURE1);
+            albedo_map->bind();
+            if(sampler) sampler->bind(1); 
+            shader->set("material.albedo", 1);
+        }
+
+
+        if(specular_map) {
+            glActiveTexture(GL_TEXTURE2);
+            specular_map->bind();
+            if(sampler) sampler->bind(2);
+            shader->set("material.specular", 2);
+        }
+        
+        if(roughness_map) {
+            glActiveTexture(GL_TEXTURE3);
+            roughness_map->bind();
+            if(sampler) sampler->bind(3);
+            shader->set("material.roughness_map", 3);
+        }
+        
+        if(ambient_occlusion_map) {
+            glActiveTexture(GL_TEXTURE4);
+            ambient_occlusion_map->bind();
+            if(sampler) sampler->bind(4);
+            shader->set("material.ambient_occlusion_map", 4);
+        }
+        
+        if(emissive_map) {
+            glActiveTexture(GL_TEXTURE5);
+            emissive_map->bind();
+            if(sampler) sampler->bind(5);
+            shader->set("material.emissive_map", 5);
+        }
+
+        // reset to to prevent accidental modifications
+        glActiveTexture(GL_TEXTURE0); 
+    }
+
+    // This function read the material data from a json object
+    void LitMaterial::deserialize(const nlohmann::json& data){
+        TexturedMaterial::deserialize(data);
+        if(!data.is_object()) return;
+        albedo_map = AssetLoader<Texture2D>::get(data.value("albedo", ""));
+        specular_map =  AssetLoader<Texture2D>::get(data.value("specular", ""));
+        roughness_map =  AssetLoader<Texture2D>::get(data.value("roughness", ""));
+        ambient_occlusion_map =  AssetLoader<Texture2D>::get(data.value("ambientOcclusion", ""));
+        emissive_map =  AssetLoader<Texture2D>::get(data.value("emissive", ""));
+        
+    }
+
+
 }
