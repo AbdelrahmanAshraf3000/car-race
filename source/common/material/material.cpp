@@ -71,7 +71,7 @@ namespace our {
             glActiveTexture(GL_TEXTURE0);
             albedo_map->bind();
             if(sampler) sampler->bind(0); 
-            shader->set("material.albedo", 0);
+            shader->set("material.albedo_map", 0);
         }
 
 
@@ -79,7 +79,7 @@ namespace our {
             glActiveTexture(GL_TEXTURE1);
             specular_map->bind();
             if(sampler) sampler->bind(1);
-            shader->set("material.specular", 1);
+            shader->set("material.specular_map", 1);
         }
         
         if(roughness_map) {
