@@ -8,7 +8,8 @@
 #include "rigidbody.hpp"
 #include "collider.hpp"
 #include "light.hpp"
-
+#include "sound.hpp"
+#include "input.hpp"
 namespace our
 {
 
@@ -43,8 +44,17 @@ namespace our
         {
             component = entity->addComponent<ColliderComponent>();
         }
-        else if(type == LightComponent::getID()){
+        else if (type == LightComponent::getID())
+        {
             component = entity->addComponent<LightComponent>();
+        }
+        else if (type == SoundComponent::getID())
+        {
+            component = entity->addComponent<SoundComponent>();
+        }
+        else if (type == InputComponent::getID())
+        {
+            component = entity->addComponent<InputComponent>();
         }
 
         if (component)

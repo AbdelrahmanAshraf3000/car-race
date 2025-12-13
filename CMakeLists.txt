@@ -87,10 +87,10 @@ set(COMMON_SOURCES
         source/common/components/light.hpp
         source/common/components/light.cpp
 
-        #source/common/components/sound.hpp
-        #source/common/components/sound.cpp
+        source/common/components/sound.hpp
+        source/common/components/sound.cpp
         
-        #source/common/systems/miniaudio.h
+        source/common/systems/miniaudio.h
         source/common/systems/forward-renderer.hpp
         source/common/systems/forward-renderer.cpp
         source/common/systems/ColliderSystem.hpp
