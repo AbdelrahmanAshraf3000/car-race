@@ -19,16 +19,13 @@ namespace our {
             skyShader->attach("assets/shaders/textured.frag", GL_FRAGMENT_SHADER);
             skyShader->link();
             
-            //TODO: (Req 10) Pick the correct pipeline state to draw the sky
-            // Hints: the sky will be draw after the opaque objects so we would need depth testing but which depth funtion should we pick?
-            // We will draw the sphere from the inside, so what options should we pick for the face culling.
             PipelineState skyPipelineState{};
             skyPipelineState.depthTesting.enabled = true;
             skyPipelineState.depthTesting.function = GL_LEQUAL;
             skyPipelineState.faceCulling.enabled = true;
             skyPipelineState.faceCulling.culledFace = GL_FRONT;
             
-            // Load the sky texture (note that we don't need mipmaps since we want to avoid any unnecessary blurring while rendering the sky)
+            // Load the sky texture
             std::string skyTextureFile = config.value<std::string>("sky", "");
             Texture2D* skyTexture = texture_utils::loadImage(skyTextureFile, false);
 
@@ -52,18 +49,14 @@ namespace our {
 
         // Then we check if there is a postprocessing shader in the configuration
         if(config.contains("postprocess")){
-            //TODO: (Req 11) Create a framebuffer
             glGenFramebuffers(1, &postprocessFrameBuffer);
             glBindFramebuffer(GL_FRAMEBUFFER, postprocessFrameBuffer);
 
-            //TODO: (Req 11) Create a color and a depth texture and attach them to the framebuffer
-            // Hints: The color format can be (Red, Green, Blue and Alpha components with 8 bits for each channel).
-            // The depth format can be (Depth component with 24 bits).
             colorTarget = texture_utils::empty(GL_RGBA8, windowSize);
             depthTarget = texture_utils::empty(GL_DEPTH_COMPONENT24, windowSize);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTarget->getOpenGLName(), 0);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTarget->getOpenGLName(), 0);
-            //TODO: (Req 11) Unbind the framebuffer just to be safe
+            
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
             // Create a vertex array to use for drawing the texture
@@ -87,8 +80,6 @@ namespace our {
             postprocessMaterial->shader = postprocessShader;
             postprocessMaterial->texture = colorTarget;
             postprocessMaterial->sampler = postprocessSampler;
-            // The default options are fine but we don't need to interact with the depth buffer
-            // so it is more performant to disable the depth mask
             postprocessMaterial->pipelineState.depthMask = false;
         }
     }
@@ -119,12 +110,16 @@ namespace our {
         CameraComponent* camera = nullptr;
         opaqueCommands.clear();
         transparentCommands.clear();
-        lights.clear();
+        lightCommands.clear(); // CHANGED: lights -> lightCommands
+        
         for(auto entity : world->getEntities()){
             // If we hadn't found a camera yet, we look for a camera in this entity
             if(!camera) camera = entity->getComponent<CameraComponent>();
-            if(auto light =  entity->getComponent<LightComponent>(); light )
-                lights.push_back(light);
+            
+            // CHANGED: lights -> lightCommands
+            if(auto light = entity->getComponent<LightComponent>(); light )
+                lightCommands.push_back(light);
+            
             // If this entity has a mesh renderer component
             if(auto meshRenderer = entity->getComponent<MeshRendererComponent>(); meshRenderer){
                 // We construct a command from it
@@ -146,75 +141,61 @@ namespace our {
         // If there is no camera, we return (we cannot render without a camera)
         if(camera == nullptr) return;
 
-        //TODO: (Req 9) Modify the following line such that "cameraForward" contains a vector pointing the camera forward direction
-        // HINT: See how you wrote the CameraComponent::getViewMatrix, it should help you solve this one
         auto M = camera->getOwner()->getLocalToWorldMatrix();
         glm::vec3 eye = M * glm::vec4(0, 0, 0, 1);
         glm::vec3 center = M * glm::vec4(0, 0, -1, 1);
         glm::vec3 cameraForward = glm::normalize(center - eye);
 
         std::sort(transparentCommands.begin(), transparentCommands.end(), [cameraForward](const RenderCommand& first, const RenderCommand& second){
-            //TODO: (Req 9) Finish this function
-            // HINT: the following return should return true "first" should be drawn before "second". 
             float firstDistance = glm::dot(first.center, cameraForward);
             float secondDistance = glm::dot(second.center, cameraForward);
-            if(firstDistance > secondDistance) 
-                return true;
-            else 
-                return false;
+            return firstDistance > secondDistance;
         });
 
-        //TODO: (Req 9) Get the camera ViewProjection matrix and store it in VP
         glm::mat4 VP = camera->getProjectionMatrix(windowSize) * camera->getViewMatrix();
         
-        //TODO: (Req 9) Set the OpenGL viewport using viewportStart and viewportSize
         glViewport(0, 0, windowSize.x, windowSize.y);
         
-        //TODO: (Req 9) Set the clear color to black and the clear depth to 1
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClearDepth(1.0f);
         
-        //TODO: (Req 9) Set the color mask to true and the depth mask to true (to ensure the glClear will affect the framebuffer)
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
         glDepthMask(GL_TRUE);
 
-        // If there is a postprocess material, bind the framebuffer
         if(postprocessMaterial){
-            //TODO: (Req 11) bind the framebuffer
             glBindFramebuffer(GL_FRAMEBUFFER, postprocessFrameBuffer);
-            
         }
 
-        //TODO: (Req 9) Clear the color and depth buffers
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
-        //TODO: (Req 9) Draw all the opaque commands
-        // Don't forget to set the "transform" uniform to be equal the model-view-projection matrix for each render command
         for(auto& command : opaqueCommands){
             command.material->setup();
             glm::mat4 modelMatrix = command.localToWorld;
             glm::mat4 transform = VP * modelMatrix;
             command.material->shader->set("transform", transform);
+            
             if(dynamic_cast<LitMaterial*>(command.material)){
-
                 command.material->shader->set("M", command.localToWorld);
                 command.material->shader->set("VP", VP);
                 command.material->shader->set("camera_position", eye);
                 glm::mat4 M_IT = glm::transpose(glm::inverse(command.localToWorld));
                 command.material->shader->set("M_IT", M_IT);
-                command.material->shader->set("light_count", (int)lights.size());
+                
+                // CHANGED: lights -> lightCommands
+                command.material->shader->set("light_count", (int)lightCommands.size());
                 command.material->shader->set("ambient_light", glm::vec3(0.1f, 0.1f, 0.1f));
 
-                for(int i = 0; i < lights.size() && i < 8; i++){ 
+                // CHANGED: lights -> lightCommands
+                for(int i = 0; i < lightCommands.size() && i < 8; i++){ 
                     std::string prefix = "lights["+std::to_string(i)+"].";
                     
-                    command.material->shader->set(prefix +"type", (int)lights[i]->lightType);
-                    command.material->shader->set(prefix +"color", lights[i]->color);
-                    command.material->shader->set(prefix +"attenuation", lights[i]->attenuation);
-                    command.material->shader->set(prefix +"inner_cone_angle", lights[i]->inner_cone_angle);
-                    command.material->shader->set(prefix +"outer_cone_angle", lights[i]->outer_cone_angle);
+                    command.material->shader->set(prefix +"type", (int)lightCommands[i]->lightType);
+                    command.material->shader->set(prefix +"color", lightCommands[i]->color);
+                    command.material->shader->set(prefix +"attenuation", lightCommands[i]->attenuation);
+                    command.material->shader->set(prefix +"inner_cone_angle", lightCommands[i]->inner_cone_angle);
+                    command.material->shader->set(prefix +"outer_cone_angle", lightCommands[i]->outer_cone_angle);
 
-                    auto modalMat = lights[i]->getOwner()->getLocalToWorldMatrix();
+                    auto modalMat = lightCommands[i]->getOwner()->getLocalToWorldMatrix();
                     glm::vec3 lightPosition = modalMat * glm::vec4(0, 0, 0, 1);
                     glm::vec3 lightDirection = glm::normalize(glm::vec3(modalMat * glm::vec4(0, 0, -1, 0))); 
 
@@ -224,58 +205,52 @@ namespace our {
             }
             command.mesh->draw();
         }
-        // If there is a sky material, draw the sky
+
         if(this->skyMaterial){
-            //TODO: (Req 10) setup the sky material
             this->skyMaterial->setup();
             
-            //TODO: (Req 10) Get the camera position
             glm::vec3 cameraPosition = M * glm::vec4(0, 0, 0, 1);
-            //TODO: (Req 10) Create a model matrix for the sy such that it always follows the camera (sky sphere center = camera position)
             glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), cameraPosition);
-            //TODO: (Req 10) We want the sky to be drawn behind everything (in NDC space, z=1)
-            // We can acheive the is by multiplying by an extra matrix after the projection but what values should we put in it?
             glm::mat4 alwaysBehindTransform = glm::mat4(
                 1.0f, 0.0f, 0.0f, 0.0f,
                 0.0f, 1.0f, 0.0f, 0.0f,
                 0.0f, 0.0f, 0.0f, 0.0f,
                 0.0f, 0.0f, 1.0f, 1.0f
             );
-            //TODO: (Req 10) set the "transform" uniform
             glm::mat4 transform = alwaysBehindTransform * VP * modelMatrix;
             skyMaterial->shader->set("transform", transform);
             
-            //TODO: (Req 10) draw the sky sphere
             skySphere->draw();
-            
         }
-        //TODO: (Req 9) Draw all the transparent commands
-        // Don't forget to set the "transform" uniform to be equal the model-view-projection matrix for each render command
+
         for(auto& command : transparentCommands){
             command.material->setup();
             glm::mat4 modelMatrix = command.localToWorld;
             glm::mat4 transform = VP * modelMatrix;
             command.material->shader->set("transform", transform);
-                        if(dynamic_cast<LitMaterial*>(command.material)){
-
+            
+            if(dynamic_cast<LitMaterial*>(command.material)){
                 command.material->shader->set("M", command.localToWorld);
                 command.material->shader->set("VP", VP);
                 command.material->shader->set("camera_position", eye);
                 glm::mat4 M_IT = glm::transpose(glm::inverse(command.localToWorld));
                 command.material->shader->set("M_IT", M_IT);
-                command.material->shader->set("light_count", (int)lights.size());
+                
+                // CHANGED: lights -> lightCommands
+                command.material->shader->set("light_count", (int)lightCommands.size());
                 command.material->shader->set("ambient_light", glm::vec3(0.1f, 0.1f, 0.1f));
 
-                for(int i = 0; i < lights.size() && i < 8; i++){ 
+                // CHANGED: lights -> lightCommands
+                for(int i = 0; i < lightCommands.size() && i < 8; i++){ 
                     std::string prefix = "lights["+std::to_string(i)+"].";
                     
-                    command.material->shader->set(prefix +"type", (int)lights[i]->lightType);
-                    command.material->shader->set(prefix +"color", lights[i]->color);
-                    command.material->shader->set(prefix +"attenuation", lights[i]->attenuation);
-                    command.material->shader->set(prefix +"inner_cone_angle", lights[i]->inner_cone_angle);
-                    command.material->shader->set(prefix +"outer_cone_angle", lights[i]->outer_cone_angle);
+                    command.material->shader->set(prefix +"type", (int)lightCommands[i]->lightType);
+                    command.material->shader->set(prefix +"color", lightCommands[i]->color);
+                    command.material->shader->set(prefix +"attenuation", lightCommands[i]->attenuation);
+                    command.material->shader->set(prefix +"inner_cone_angle", lightCommands[i]->inner_cone_angle);
+                    command.material->shader->set(prefix +"outer_cone_angle", lightCommands[i]->outer_cone_angle);
 
-                    auto modalMat = lights[i]->getOwner()->getLocalToWorldMatrix();
+                    auto modalMat = lightCommands[i]->getOwner()->getLocalToWorldMatrix();
                     glm::vec3 lightPosition = modalMat * glm::vec4(0, 0, 0, 1);
                     glm::vec3 lightDirection = glm::normalize(glm::vec3(modalMat * glm::vec4(0, 0, -1, 0))); 
 
@@ -286,20 +261,15 @@ namespace our {
             command.mesh->draw();
         }
 
-        // If there is a postprocess material, apply postprocessing
         if(postprocessMaterial){
-            //TODO: (Req 11) Return to the default framebuffer
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glViewport(0, 0, windowSize.x, windowSize.y);
 
-            //TODO: (Req 11) Setup the postprocess material and draw the fullscreen triangle
             postprocessMaterial->setup();
             glBindVertexArray(postProcessVertexArray);
             glDrawArrays(GL_TRIANGLES, 0, 3);
             glBindVertexArray(0);
-
         }
     }
-
 }

@@ -2,7 +2,6 @@
 #include "../ecs/world.hpp"
 #include "../components/rigidbody.hpp"
 #include "../application.hpp"
-#define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobj/tiny_obj_loader.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
@@ -162,16 +161,14 @@ namespace our
         }
         void update(World *world, float deltaTime)
         {
-            if (!world)
-                return;
+            if (!world) return;
 
             for (auto entity : world->getEntities())
             {
                 auto *rigidbodyComponent = entity->getComponent<RigidbodyComponent>();
-                if (!rigidbodyComponent)
-                    continue;
+                if (!rigidbodyComponent) continue;
 
-                // Create the rigid body if not already in the world
+                // --- 1. Rigidbody Creation (Existing Logic) ---
                 if (!rigidbodyComponent->addedToWorld)
                 {
                     rigidbodyComponent->addedToWorld = true;
@@ -183,210 +180,200 @@ namespace our
                         rigidbodyComponent->mass,
                         btVector3(rigidbodyComponent->scale.x, rigidbodyComponent->scale.y, rigidbodyComponent->scale.z));
 
-                    // Set friction for the rigid body
                     rigidbodyComponent->rigidbody->setFriction(0.7f);
                     rigidbodyComponent->rigidbody->setRollingFriction(0.1f);
                 }
 
-                // If this object needs a vehicle and has non-zero mass
+                // --- 2. Vehicle Logic ---
                 if (rigidbodyComponent->input == 1 && rigidbodyComponent->mass != 0.0f)
                 {
-                    // Create RaycastVehicle once
-                    if (!rigidbodyComponent->vehicle)
-                    {
-                        // Vehicle tuning and setup
+                    // Create Vehicle if needed
+                    if (!rigidbodyComponent->vehicle) {
+                        
                         btRaycastVehicle::btVehicleTuning tuning;
-                        tuning = btRaycastVehicle::btVehicleTuning();
-                        // Configure vehicle rigid body
-                        rigidbodyComponent->rigidbody->setActivationState(DISABLE_DEACTIVATION);
-                        // Add angular and linear damping
-                        rigidbodyComponent->rigidbody->setDamping(0.1f, 0.5f); // Set linear and angular damping
-
-                        btVehicleRaycaster *raycaster = new btDefaultVehicleRaycaster(dynWorld);
-                        rigidbodyComponent->vehicle = new btRaycastVehicle(tuning, rigidbodyComponent->rigidbody, raycaster);
-                        rigidbodyComponent->vehicle->setCoordinateSystem(0, 1, 2);
-
-                        btBoxShape *boxShape = static_cast<btBoxShape *>(rigidbodyComponent->rigidbody->getCollisionShape());
-                        btVector3 chassisHalfExtents = boxShape->getHalfExtentsWithoutMargin();
-
-                        btVector3 wheelDir(0, -1, 0);
-                        btVector3 wheelAxle(-1, 0, 0);
-                        float restLength = 0.1f; // Increase rest length
-                        float radius = 0.3f;     // Smaller wheel radius for stability
-                        float offsetX = 0.3f;    // Wider wheel base
-                        float offsetZ = 0.4f;    // Longer wheel base
-                        btVector3 wheelPositions[] = {
-                            btVector3(chassisHalfExtents.x() + radius + offsetX, 0, chassisHalfExtents.z() + radius + offsetZ),
-                            btVector3(-chassisHalfExtents.x() - radius - offsetX, 0, chassisHalfExtents.z() + radius + offsetZ),
-                            btVector3(chassisHalfExtents.x() + radius + offsetX, 0, -chassisHalfExtents.z() - radius - offsetZ),
-                            btVector3(-chassisHalfExtents.x() - radius - offsetX, 0, -chassisHalfExtents.z() - radius - offsetZ)};
-
-                        // Add wheels with friction
-                        for (int i = 0; i < 4; i++)
-                        {
-                            bool isFrontWheel = (i < 2);
-                            rigidbodyComponent->vehicle->addWheel(wheelPositions[i], wheelDir, wheelAxle, restLength, radius, tuning, isFrontWheel);
-
-                            // Set wheel friction
-                            btWheelInfo &wheel = rigidbodyComponent->vehicle->getWheelInfo(i);
-                            wheel.m_frictionSlip = 10000.0f; // Lower friction slip
-                            wheel.m_rollInfluence = 1.5f;    // Reduce roll influence for better stability
-                        }
-                        dynWorld->addVehicle(rigidbodyComponent->vehicle);
+                         tuning = btRaycastVehicle::btVehicleTuning();
+                         rigidbodyComponent->rigidbody->setActivationState(DISABLE_DEACTIVATION);
+                         rigidbodyComponent->rigidbody->setDamping(0.1f, 0.5f);
+                         btVehicleRaycaster *raycaster = new btDefaultVehicleRaycaster(dynWorld);
+                         rigidbodyComponent->vehicle = new btRaycastVehicle(tuning, rigidbodyComponent->rigidbody, raycaster);
+                         rigidbodyComponent->vehicle->setCoordinateSystem(0, 1, 2);
+                         
+                         btBoxShape *boxShape = static_cast<btBoxShape *>(rigidbodyComponent->rigidbody->getCollisionShape());
+                         btVector3 chassisHalfExtents = boxShape->getHalfExtentsWithoutMargin();
+                         
+                         btVector3 wheelDir(0, -1, 0);
+                         btVector3 wheelAxle(-1, 0, 0);
+                         float restLength = 0.1f; 
+                         float radius = 0.3f;     
+                         float offsetX = 0.3f;    
+                         float offsetZ = 0.4f;    
+                         
+                         btVector3 wheelPositions[] = {
+                             btVector3(chassisHalfExtents.x() + radius + offsetX, 0, chassisHalfExtents.z() + radius + offsetZ),
+                             btVector3(-chassisHalfExtents.x() - radius - offsetX, 0, chassisHalfExtents.z() + radius + offsetZ),
+                             btVector3(chassisHalfExtents.x() + radius + offsetX, 0, -chassisHalfExtents.z() - radius - offsetZ),
+                             btVector3(-chassisHalfExtents.x() - radius - offsetX, 0, -chassisHalfExtents.z() - radius - offsetZ)};
+                         
+                         for (int i = 0; i < 4; i++) {
+                             bool isFrontWheel = (i < 2);
+                             rigidbodyComponent->vehicle->addWheel(wheelPositions[i], wheelDir, wheelAxle, restLength, radius, tuning, isFrontWheel);
+                             btWheelInfo &wheel = rigidbodyComponent->vehicle->getWheelInfo(i);
+                             wheel.m_frictionSlip = 10000.0f;
+                             wheel.m_rollInfluence = 1.5f;   
+                         }
+                         dynWorld->addVehicle(rigidbodyComponent->vehicle);
                     }
+
+                    // --- 3. INPUT & BOOST LOGIC (Modified) ---
+                    
+                    // Check Boost Status FIRST
+                    bool boostActive = app->getKeyboard().isPressed(GLFW_KEY_X);
+
+                    // Define Limits based on state
+                    float maxSpeed = boostActive ? 25.0f : 7.0f;   // Limit goes up when boosting
+                    float acceleration = boostActive ? 4000.0f : 700.0f; // Force goes up when boosting
+
+                    // Clamp Velocity Dynamicallly
                     btVector3 velocity = rigidbodyComponent->rigidbody->getLinearVelocity();
-                    if (velocity.length() > 7.0f)
+                    float currentSpeed = velocity.length();
+                    if (currentSpeed > maxSpeed)
                     {
-                        velocity = velocity.normalized() * 7.0f;
+                        velocity = velocity.normalized() * maxSpeed;
                         rigidbodyComponent->rigidbody->setLinearVelocity(velocity);
                     }
 
+                    // Input Variables
                     static float engineForce = 0.0f;
                     static float steeringValue = 0.0f;
                     float brakeForce = 0.0f;
-                    // Check if the vehicle is in the air by examining the wheel contact points
-                    bool isInAir = true;
+
+                    // Handle Engine Force
+                    if (boostActive) {
+                         engineForce = acceleration; // Immediate boost power
+                    }
+                    else if (app->getKeyboard().isPressed(GLFW_KEY_UP)) {
+                         engineForce += 2000.0f * deltaTime; // Smooth acceleration
+                         if(engineForce > acceleration) engineForce = acceleration;
+                    }
+                    else if (app->getKeyboard().isPressed(GLFW_KEY_DOWN)) {
+                         engineForce -= 2000.0f * deltaTime;
+                         if(engineForce < -acceleration) engineForce = -acceleration;
+                    }
+                    else {
+                         engineForce = 0.0f;
+                         brakeForce = 2.0f; // Gradual deceleration
+                    }
+
+                    // Handle Steering (Smooth rotation)
+                    float steeringSpeed = 2.0f; 
+                    if (app->getKeyboard().isPressed(GLFW_KEY_LEFT)) {
+                         steeringValue += steeringSpeed * deltaTime;
+                    }
+                    else if (app->getKeyboard().isPressed(GLFW_KEY_RIGHT)) {
+                         steeringValue -= steeringSpeed * deltaTime;
+                    }
+                    else {
+                         // Return to center
+                         if(steeringValue > 0) steeringValue -= steeringSpeed * deltaTime;
+                         if(steeringValue < 0) steeringValue += steeringSpeed * deltaTime;
+                         if(abs(steeringValue) < 0.05f) steeringValue = 0;
+                    }
+
+                    // Clamp steering based on speed
+                    float maxSteeringAngle = glm::mix(0.4f, 0.1f, glm::clamp(currentSpeed / 20.0f, 0.0f, 1.0f));
+                    steeringValue = glm::clamp(steeringValue, -maxSteeringAngle, maxSteeringAngle);
+
+                    if (app->getKeyboard().isPressed(GLFW_KEY_SPACE)) {
+                        brakeForce = 50.0f;
+                        engineForce = 0.0f;
+                    }
+
+                    // Apply to Vehicle
                     for (int i = 0; i < rigidbodyComponent->vehicle->getNumWheels(); i++)
                     {
-                        if (rigidbodyComponent->vehicle->getWheelInfo(i).m_raycastInfo.m_isInContact)
-                        {
+                        rigidbodyComponent->vehicle->applyEngineForce(engineForce, i);
+                        rigidbodyComponent->vehicle->setBrake(brakeForce, i);
+                        if (i < 2) {
+                            rigidbodyComponent->vehicle->setSteeringValue(steeringValue, i);
+                        }
+                    }
+                    
+                    rigidbodyComponent->vehicle->updateVehicle(deltaTime);
+                    
+                    // Handle Air Logic
+                    bool isInAir = true;
+                    for (int i = 0; i < rigidbodyComponent->vehicle->getNumWheels(); i++) {
+                        if (rigidbodyComponent->vehicle->getWheelInfo(i).m_raycastInfo.m_isInContact) {
                             isInAir = false;
                             break;
                         }
                     }
-
-                    // Reduce gravity if the vehicle is in the air
-                    if (isInAir)
-                    {
-                        rigidbodyComponent->rigidbody->applyCentralForce(btVector3(0, 15, 0)); // Small upward force
-
-                        // Level the car by setting the angular velocity to zero
+                    if (isInAir) {
+                        rigidbodyComponent->rigidbody->applyCentralForce(btVector3(0, 15, 0));
                         rigidbodyComponent->rigidbody->setAngularVelocity(btVector3(0, 0, 0));
-
-                        dynWorld->setGravity(btVector3(0, -2, 0)); // Reduced gravity
-                    }
-                    else
-                    {
-                        dynWorld->setGravity(btVector3(0, -9.81, 0)); // Normal gravity
-                    }
-                    if (app->getKeyboard().isPressed(GLFW_KEY_UP))
-                    {
-                        engineForce += 10.0f;
-                    }
-                    else if (app->getKeyboard().isPressed(GLFW_KEY_DOWN))
-                    {
-                        engineForce -= 10.0f;
-                    }
-                    else
-                    {
-                        engineForce = 0.0f;
-                        brakeForce = 2.0f;
-                    }
-
-                    // Modify steering logic
-                    if (app->getKeyboard().isPressed(GLFW_KEY_LEFT))
-                    {
-                        steeringValue += 0.005f; // Reduce steering increment for smoother turns
-                    }
-                    else if (app->getKeyboard().isPressed(GLFW_KEY_RIGHT))
-                    {
-                        steeringValue -= 0.005f; // Reduce steering increment for smoother turns
-                    }
-                    else
-                    {
-                        // Add gradual return to center
-                        steeringValue *= 0.95f; // Gradually return steering to center when no input
-                    }
-
-                    // Adjust steering angle limits based on velocity
-                    float maxSteeringAngle = glm::mix(0.4f, 0.07f, glm::clamp(velocity.length() / 10.0f, 0.0f, 1.0f));
-                    steeringValue = glm::clamp(steeringValue, -maxSteeringAngle, maxSteeringAngle);
-
-                    if (app->getKeyboard().isPressed(GLFW_KEY_SPACE))
-                    {
-                        brakeForce = 10.0f;
-                    }
-
-                    for (int i = 0; i < rigidbodyComponent->vehicle->getNumWheels(); i++)
-                    {
-                        engineForce = glm::clamp(engineForce, -700.0f, 700.0f);
-                        rigidbodyComponent->vehicle->applyEngineForce(engineForce, i);
-                        rigidbodyComponent->vehicle->setBrake(brakeForce, i);
-
-                        if (i < 2)
-                        {
-                            rigidbodyComponent->vehicle->setSteeringValue(steeringValue, i);
-                        }
-                    }
-                    rigidbodyComponent->vehicle->updateVehicle(deltaTime);
-                }
-                // Get the current transform of the rigid body
-                btTransform transform;
-                if (rigidbodyComponent->vehicle)
-                {
-
-                    rigidbodyComponent->rigidbody->getMotionState()->getWorldTransform(transform);
-                    // Get position and rotation
-                    btVector3 pos = transform.getOrigin();
-                    btQuaternion rot = transform.getRotation();
-
-                    // Convert to Euler angles
-                    float yaw, pitch, roll;
-                    quaternionToEuler(rot, yaw, roll, pitch);
-
-                    // Update the entity's position and rotation
-                    rigidbodyComponent->position = glm::vec3(pos.x(), pos.y(), pos.z());
-                    rigidbodyComponent->rotation = glm::vec3(yaw, pitch, roll);
-
-                    entity->localTransform.position = rigidbodyComponent->position;
-                    entity->localTransform.position.y -= 0.07f;
-                    entity->localTransform.rotation = rigidbodyComponent->rotation;
-                    
-                    btVector3 velocity = rigidbodyComponent->rigidbody->getLinearVelocity();
-                    float steeringValue = rigidbodyComponent->vehicle->getSteeringValue(0);
-                    for (auto child : world->getEntities())
-                    {
-                        if (child->parent == entity)
-                        {
-                            std::string name = child->name;
-                            if (name.find("tire") != std::string::npos)
-                            {
-                                MovementComponent *movement = child->getComponent<MovementComponent>();
-                                if (movement)
-                                {
-                                    float groundSpeed = velocity.length();
-                                    // Get forward direction from velocity
-                                    float forwardSpeed = velocity.dot(rigidbodyComponent->rigidbody->getWorldTransform().getBasis().getColumn(2));
-                                    
-                                    if (rigidbodyComponent->vehicle->getWheelInfo(0).m_raycastInfo.m_isInContact) {
-                                        // Apply rotation based on forward/backward movement
-                                        float rotationSpeed = groundSpeed * 2 * (forwardSpeed >= 0 ? 1 : -1);
-                                        movement->angularVelocity = glm::vec3(rotationSpeed, 0.0f, 0.0f);
-                                    } else {
-                                        movement->angularVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
-                                    }
-                                }
-                                if (name == "tireFront")
-                                {
-                                    child->localTransform.rotation = glm::vec3(child->localTransform.rotation.x, steeringValue, 0.0f);
-                                }
-                            }
-                        }
+                        dynWorld->setGravity(btVector3(0, -2, 0));
+                    } else {
+                        dynWorld->setGravity(btVector3(0, -9.81, 0));
                     }
                 }
+                
+                // --- 4. Sync Visuals to Physics ---
                 else if (rigidbodyComponent->rigidbody)
                 {
-                    rigidbodyComponent->rigidbody->getMotionState()->getWorldTransform(transform);
-                    btVector3 pos = transform.getOrigin();
-                    btQuaternion rot = transform.getRotation();
+                     btTransform transform;
+                     rigidbodyComponent->rigidbody->getMotionState()->getWorldTransform(transform);
+                     btVector3 pos = transform.getOrigin();
+                     btQuaternion rot = transform.getRotation();
+                     float yaw, pitch, roll;
+                     quaternionToEuler(rot, yaw, pitch, roll);
+                     rigidbodyComponent->position = glm::vec3(pos.x(), pos.y(), pos.z());
+                     rigidbodyComponent->rotation = glm::vec3(yaw, roll, pitch);
+                     entity->localTransform.position = rigidbodyComponent->position;
+                     entity->localTransform.rotation = rigidbodyComponent->rotation;
+                }
 
-                    float yaw, pitch, roll;
-                    quaternionToEuler(rot, yaw, pitch, roll);
+                // Sync Vehicle Visuals
+                if (rigidbodyComponent->vehicle)
+                {
+                     btTransform transform;
+                     rigidbodyComponent->rigidbody->getMotionState()->getWorldTransform(transform);
+                     btVector3 pos = transform.getOrigin();
+                     btQuaternion rot = transform.getRotation();
+                     float yaw, pitch, roll;
+                     quaternionToEuler(rot, yaw, roll, pitch); 
+                     
+                     rigidbodyComponent->position = glm::vec3(pos.x(), pos.y(), pos.z());
+                     rigidbodyComponent->rotation = glm::vec3(yaw, pitch, roll);
+                     
+                     entity->localTransform.position = rigidbodyComponent->position;
+                     entity->localTransform.position.y -= 0.07f; 
+                     entity->localTransform.rotation = rigidbodyComponent->rotation;
+                     
+                     // Sync Wheels
+                     float currentSteering = rigidbodyComponent->vehicle->getSteeringValue(0);
+                     btVector3 velocity = rigidbodyComponent->rigidbody->getLinearVelocity();
 
-                    rigidbodyComponent->position = glm::vec3(pos.x(), pos.y(), pos.z());
-                    rigidbodyComponent->rotation = glm::vec3(yaw, roll, pitch);
-                    entity->localTransform.position = rigidbodyComponent->position;
-                    entity->localTransform.rotation = rigidbodyComponent->rotation;
+                     for (auto child : world->getEntities()) {
+                         if (child->parent == entity) {
+                             std::string name = child->name;
+                              if (name.find("tire") != std::string::npos) {
+                                   MovementComponent *movement = child->getComponent<MovementComponent>();
+                                   if(movement) {
+                                        float groundSpeed = velocity.length();
+                                        float forwardSpeed = velocity.dot(rigidbodyComponent->rigidbody->getWorldTransform().getBasis().getColumn(2));
+                                        if (rigidbodyComponent->vehicle->getWheelInfo(0).m_raycastInfo.m_isInContact) {
+                                            float rotationSpeed = groundSpeed * 2 * (forwardSpeed >= 0 ? 1 : -1);
+                                            movement->angularVelocity = glm::vec3(rotationSpeed, 0.0f, 0.0f);
+                                        } else {
+                                            movement->angularVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
+                                        }
+                                   }
+                                   if (name == "tireFront") {
+                                        child->localTransform.rotation = glm::vec3(child->localTransform.rotation.x, currentSteering, 0.0f);
+                                   }
+                              }
+                         }
+                     }
                 }
             }
         }
