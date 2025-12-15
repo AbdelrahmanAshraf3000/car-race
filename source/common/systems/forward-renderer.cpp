@@ -110,15 +110,15 @@ namespace our {
         CameraComponent* camera = nullptr;
         opaqueCommands.clear();
         transparentCommands.clear();
-        lightCommands.clear(); // CHANGED: lights -> lightCommands
+        lights.clear(); 
         
         for(auto entity : world->getEntities()){
             // If we hadn't found a camera yet, we look for a camera in this entity
             if(!camera) camera = entity->getComponent<CameraComponent>();
             
-            // CHANGED: lights -> lightCommands
+            
             if(auto light = entity->getComponent<LightComponent>(); light )
-                lightCommands.push_back(light);
+                lights.push_back(light);
             
             // If this entity has a mesh renderer component
             if(auto meshRenderer = entity->getComponent<MeshRendererComponent>(); meshRenderer){
@@ -181,23 +181,23 @@ namespace our {
                 glm::mat4 M_IT = glm::transpose(glm::inverse(command.localToWorld));
                 command.material->shader->set("M_IT", M_IT);
                 
-                // CHANGED: lights -> lightCommands
-                command.material->shader->set("light_count", (int)lightCommands.size());
+                
+                command.material->shader->set("light_count", (int)lights.size());
                 command.material->shader->set("ambient_light", glm::vec3(0.1f, 0.1f, 0.1f));
 
-                // CHANGED: lights -> lightCommands
-                for(int i = 0; i < lightCommands.size() && i < 8; i++){ 
+               
+                for(int i = 0; i < lights.size() && i < 8; i++){ 
                     std::string prefix = "lights["+std::to_string(i)+"].";
                     
-                    command.material->shader->set(prefix +"type", (int)lightCommands[i]->lightType);
-                    command.material->shader->set(prefix +"color", lightCommands[i]->color);
-                    command.material->shader->set(prefix +"attenuation", lightCommands[i]->attenuation);
-                    command.material->shader->set(prefix +"inner_cone_angle", lightCommands[i]->inner_cone_angle);
-                    command.material->shader->set(prefix +"outer_cone_angle", lightCommands[i]->outer_cone_angle);
+                    command.material->shader->set(prefix +"type", (int)lights[i]->lightType);
+                    command.material->shader->set(prefix +"color", lights[i]->color);
+                    command.material->shader->set(prefix +"attenuation", lights[i]->attenuation);
+                    command.material->shader->set(prefix +"inner_cone_angle", lights[i]->inner_cone_angle);
+                    command.material->shader->set(prefix +"outer_cone_angle", lights[i]->outer_cone_angle);
 
-                    auto modalMat = lightCommands[i]->getOwner()->getLocalToWorldMatrix();
-                    glm::vec3 lightPosition = modalMat * glm::vec4(0, 0, 0, 1);
-                    glm::vec3 lightDirection = glm::normalize(glm::vec3(modalMat * glm::vec4(0, 0, -1, 0))); 
+                    glm::mat4 modalMat = lights[i]->getOwner()->getLocalToWorldMatrix();
+                    glm::vec3 lightPosition = glm::vec3(modalMat * glm::vec4(0, 0, 0, 1));
+                    glm::vec3 lightDirection = glm::normalize(glm::vec3(modalMat * glm::vec4(0, 0, -1, 0)));  
 
                     command.material->shader->set(prefix + "position", lightPosition);
                     command.material->shader->set(prefix + "direction", lightDirection);
@@ -236,22 +236,22 @@ namespace our {
                 glm::mat4 M_IT = glm::transpose(glm::inverse(command.localToWorld));
                 command.material->shader->set("M_IT", M_IT);
                 
-                // CHANGED: lights -> lightCommands
-                command.material->shader->set("light_count", (int)lightCommands.size());
+               
+                command.material->shader->set("light_count", (int)lights.size());
                 command.material->shader->set("ambient_light", glm::vec3(0.1f, 0.1f, 0.1f));
 
-                // CHANGED: lights -> lightCommands
-                for(int i = 0; i < lightCommands.size() && i < 8; i++){ 
+                
+                for(int i = 0; i < lights.size() && i < 8; i++){ 
                     std::string prefix = "lights["+std::to_string(i)+"].";
                     
-                    command.material->shader->set(prefix +"type", (int)lightCommands[i]->lightType);
-                    command.material->shader->set(prefix +"color", lightCommands[i]->color);
-                    command.material->shader->set(prefix +"attenuation", lightCommands[i]->attenuation);
-                    command.material->shader->set(prefix +"inner_cone_angle", lightCommands[i]->inner_cone_angle);
-                    command.material->shader->set(prefix +"outer_cone_angle", lightCommands[i]->outer_cone_angle);
+                    command.material->shader->set(prefix +"type", (int)lights[i]->lightType);
+                    command.material->shader->set(prefix +"color", lights[i]->color);
+                    command.material->shader->set(prefix +"attenuation", lights[i]->attenuation);
+                    command.material->shader->set(prefix +"inner_cone_angle", lights[i]->inner_cone_angle);
+                    command.material->shader->set(prefix +"outer_cone_angle", lights[i]->outer_cone_angle);
 
-                    auto modalMat = lightCommands[i]->getOwner()->getLocalToWorldMatrix();
-                    glm::vec3 lightPosition = modalMat * glm::vec4(0, 0, 0, 1);
+                    glm::mat4 modalMat = lights[i]->getOwner()->getLocalToWorldMatrix();
+                    glm::vec3 lightPosition = glm::vec3(modalMat * glm::vec4(0, 0, 0, 1));
                     glm::vec3 lightDirection = glm::normalize(glm::vec3(modalMat * glm::vec4(0, 0, -1, 0))); 
 
                     command.material->shader->set(prefix + "position", lightPosition);

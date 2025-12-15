@@ -26,7 +26,7 @@ namespace our
         glm::ivec2 windowSize;
         std::vector<RenderCommand> opaqueCommands;
         std::vector<RenderCommand> transparentCommands;
-        std::vector<LightComponent*> lightCommands;
+        std::vector<LightComponent*> lights;
         
         Mesh* skySphere;
         TexturedMaterial* skyMaterial;
