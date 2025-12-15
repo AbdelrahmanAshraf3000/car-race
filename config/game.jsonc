@@ -332,12 +332,13 @@
                
                     },{ 
                         "position"  : [4, 0.85, 6],
+                        "rotation": [180, 0, 0],
                         "components" : [
                             {
                                 "type": "Light",
                                 "color": [5, 5, 0],
                                 "attenuation": [1, 0.1, 0.1],
-                                "direction":[0,0,1],
+                                "direction":[0,0,-1],
                                 "inner_cone_angle": 0.349,
                                 "outer_cone_angle": 0.524,
                                 "lightType": "spot" 
@@ -347,12 +348,13 @@
                     },
                     { 
                         "position"  : [-4, 0.85, 6],
+                        "rotation": [180, 0, 0],
                         "components" : [
                             {
                                 "type": "Light",
                                 "color": [5,5, 0],
                                 "attenuation": [1, 0.1, 0.1],
-                                "direction":[0,0,1],
+                                "direction":[0,0,-1],
                                 "inner_cone_angle": 0.349,
                                 "outer_cone_angle": 0.524,
                                 "lightType": "spot" 
@@ -365,6 +367,7 @@
 
         {
             "position": [0, 100, 0],
+
             "scale": [10, 10, 10],
             "components": [
                 {
