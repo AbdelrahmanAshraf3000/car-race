@@ -27,6 +27,8 @@ namespace our{
             attenuation = data.value("attenuation",attenuation);
             inner_cone_angle = data.value("innerConeAngle",inner_cone_angle);
             outer_cone_angle = data.value("outerConeAngle",outer_cone_angle);
+            direction = data.value("direction",direction);
+            color = data.value("color",color);
 
         }
 }

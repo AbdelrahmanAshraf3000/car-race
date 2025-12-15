@@ -16,6 +16,7 @@ namespace our{
 
         LightType lightType = LightType::DIRECTIONAL ;
         glm::vec3 color = glm::vec3(1.0f,1.0f,1.0f);
+        glm::vec3 direction = glm::vec3(0.0f,0.0f,-1.0f);
         glm::vec3 attenuation = glm::vec3(1.0f,0.0f,0.0f);
         float inner_cone_angle = glm::radians(15.0f); // Theta_p
         float outer_cone_angle = glm::radians(30.0f); // Theta_u

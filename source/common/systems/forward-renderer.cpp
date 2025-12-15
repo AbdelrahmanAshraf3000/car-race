@@ -183,7 +183,7 @@ namespace our {
                 
                 
                 command.material->shader->set("light_count", (int)lights.size());
-                command.material->shader->set("ambient_light", glm::vec3(0.1f, 0.1f, 0.1f));
+                command.material->shader->set("ambient_light", glm::vec3(0.1f, 0.1f, 0.f));
 
                
                 for(int i = 0; i < lights.size() && i < 8; i++){ 
@@ -197,7 +197,7 @@ namespace our {
 
                     glm::mat4 modalMat = lights[i]->getOwner()->getLocalToWorldMatrix();
                     glm::vec3 lightPosition = glm::vec3(modalMat * glm::vec4(0, 0, 0, 1));
-                    glm::vec3 lightDirection = glm::normalize(glm::vec3(modalMat * glm::vec4(0, 0, -1, 0)));  
+                    glm::vec3 lightDirection = glm::normalize(glm::vec3(modalMat * glm::vec4(lights[i]->direction, 0))); 
 
                     command.material->shader->set(prefix + "position", lightPosition);
                     command.material->shader->set(prefix + "direction", lightDirection);
@@ -238,7 +238,7 @@ namespace our {
                 
                
                 command.material->shader->set("light_count", (int)lights.size());
-                command.material->shader->set("ambient_light", glm::vec3(0.1f, 0.1f, 0.1f));
+                command.material->shader->set("ambient_light", glm::vec3(0.1f, 0.1f, 0.f));
 
                 
                 for(int i = 0; i < lights.size() && i < 8; i++){ 
@@ -252,7 +252,7 @@ namespace our {
 
                     glm::mat4 modalMat = lights[i]->getOwner()->getLocalToWorldMatrix();
                     glm::vec3 lightPosition = glm::vec3(modalMat * glm::vec4(0, 0, 0, 1));
-                    glm::vec3 lightDirection = glm::normalize(glm::vec3(modalMat * glm::vec4(0, 0, -1, 0))); 
+                    glm::vec3 lightDirection = glm::normalize(glm::vec3(modalMat * glm::vec4(lights[i]->direction, 0)));
 
                     command.material->shader->set(prefix + "position", lightPosition);
                     command.material->shader->set(prefix + "direction", lightDirection);

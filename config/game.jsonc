@@ -86,9 +86,9 @@
                         "depthMask": true
                     },
                     "transparent": true,
-                    "texture": "track",
+                    //"texture": "track",
                     "sampler": "default",
-                    "alphaThreshold": 0.01,
+                    //"alphaThreshold": 0.01,
                     "roughness": "track",
                     "emission": "plane-emission",
                     "specular": "track",
@@ -108,7 +108,7 @@
                         }
                     },
 
-                    "texture": "tire",
+                    //"texture": "tire",
                     "sampler": "default",
                     "roughness": "tire",
                     "emission": "plane-emission",
@@ -128,7 +128,7 @@
                         }
                     },
 
-                    "texture": "kart",
+                    //"texture": "kart",
                     "sampler": "default",
                     "roughness": "kart",
                     "emission": "plane-emission",
@@ -147,7 +147,7 @@
                             "enabled": true
                         }
                     },
-                    "texture": "mario",
+                    //"texture": "mario",
                     "sampler": "default",
                     "albedo":"mario",
                     "ambientOcclusion": "mario",
@@ -168,7 +168,7 @@
                         }
                     },
                     "tint": [1, 1, 1, 1],
-                    "texture": "monkey",
+                    //"texture": "monkey",
                     "sampler": "default",
                     "albedo":"albedo",
                     "ambientOcclusion": "ambient",
@@ -188,7 +188,7 @@
                         }
                     },
                     "tint": [1, 1, 1, 1],
-                    "texture": "moon",
+                    //"texture": "moon",
                     "sampler": "default",
                     "albedo":"moon",
                     "ambientOcclusion": "moon",
@@ -330,36 +330,50 @@
                             }
                         ]
                
+                    },{ 
+                        "position"  : [4, 0.85, 6],
+                        "components" : [
+                            {
+                                "type": "Light",
+                                "color": [5, 5, 0],
+                                "attenuation": [1, 0.1, 0.1],
+                                "direction":[0,0,1],
+                                "inner_cone_angle": 0.349,
+                                "outer_cone_angle": 0.524,
+                                "lightType": "spot" 
+                            }
+                            
+                        ]
+                    },
+                    { 
+                        "position"  : [-4, 0.85, 6],
+                        "components" : [
+                            {
+                                "type": "Light",
+                                "color": [5,5, 0],
+                                "attenuation": [1, 0.1, 0.1],
+                                "direction":[0,0,1],
+                                "inner_cone_angle": 0.349,
+                                "outer_cone_angle": 0.524,
+                                "lightType": "spot" 
+                            }
+                            
+                        ]
                     }
                 ]
             },
+
         {
-            "position": [-5,20,-5],
-            "rotation": [0,0,0],
-            "scale": [1,1,1],
+            "position": [0, 100, 0],
+            "scale": [10, 10, 10],
             "components": [
                 {
                     "type": "Light",
-                    "color": [
-                        1,
-                        1,
-                        1
-                    ],
-                    "attenuation": [
-                        1,
-                        0,
-                        0
-                    ],
-                    "direction": [
-                        0,
-                        -1,
-                        0
-                    ],
-                    "inner_cone_angle": "20",
-                    "outer_cone_angle": "30",
-                    "lightType": "point"
+                    "color": [1, 1, 1],
+                    "attenuation": [1, 0, 0],
+                    "direction":[0,0,-1],
+                    "lightType": "directional"
                 }
-        
             ]
         },
         {
@@ -370,8 +384,13 @@
                     "type": "Mesh Renderer",
                     "mesh": "sphere",
                     "material": "moon"
+                },
+                {
+                    "type": "Light",
+                    "color": [1, 1, 1],
+                    "attenuation": [1, 0, 0],
+                    "lightType": "point"
                 }
-                
                 
             ]
         },
