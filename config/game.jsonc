@@ -411,6 +411,15 @@
                     "type": "Movement",
                     "linearVelocity": [0, 0.1, 0],
                     "angularVelocity": [0, 0, -45]
+                },
+                {
+                    "type": "Light",
+                    "color": [5, 5, 0],
+                    "direction":[0,1,0],
+                    "inner_cone_angle": 0.349,
+                    "outer_cone_angle": 0.524,
+                    "attenuation": [1, 0.1, 0.1],
+                    "lightType": "spot"
                 }
             ]
         
